@@ -12,7 +12,30 @@ display_usage() {
 #NEW_PATTERN="\2"
 
 #APACHE=("(snc_redis).(DEBUG)" "\2.\1")
-APACHE=("(\])" ".")
+PATTERN="[date time] name.type: message"
+M_PATTERN=$(sed -E 's/([^a-z ])/\\\1/g' <<< "$PATTERN")
+M_PATTERN=$(sed -E 's/(\w+)/(.*)/g' <<< "$M_PATTERN")
+ARRAY=($(sed -E 's/[^a-z]+/ /g' <<< "$PATTERN"))
+
+getindex() {
+    for i in "${!ARRAY[@]}"; do
+        if [[ $1 == "${ARRAY[$i]}" ]]; then RES=$i; fi
+        RES=''
+    done
+}
+
+#getindex 'dates' RES
+
+getnames() {
+    for i in "${!ARRAY[@]}"; do
+
+    done
+}
+
+
+
+#APACHE=("\[(.*) (.*)\] (.*)\.(.*): (.*)" "\1.\5")
+APACHE=("$M_PATTERN" "\1.\5")
 
 getoptions() {
     # --(l)imit-terminal-size
