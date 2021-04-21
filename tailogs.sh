@@ -4,6 +4,15 @@
 # Define commands #
 ###################
 
+_tailogs_display_usage() {
+    echo -e "Usage: $0 [arguments] \n
+Arguments: \n
+ -g, --logfile=<file.log> \t Log filename
+ -l, --limit \t\t\t Limit to terminal screensize 
+in progress..."
+    exit 0
+}
+
 _tailogs_getoptions() {
     # --(l)imit-terminal-size
     for i in "$@"; do
@@ -26,30 +35,70 @@ _tailogs_getoptions() {
     done
 }
 
-_tailogs_display_usage() {
-    echo -e "Usage: $0 [arguments] \n
-Arguments: \n
- -g, --logfile=<file.log> \t Log filename
- -l, --limit \t\t\t Limit to terminal screensize 
-in progress..."
-    exit 0
+### INPUT ###
+
+_dev_config() {
+    FILEPATH=/var/log/apt/history.log
+    PATTERN="txton-txtwo: date  time"
+    NEW_PATTERN="txton-txtwo: time date?"
 }
 
-_tailogs_getindex() {
-    for i in "${!ARRAY[@]}"; do
-        if [[ $1 == "${ARRAY[$i]}" ]]; then RES=$(($i+1)); return; fi
+### PROCESS ###
+
+# use PATTERN
+# return SLASHED_PATTERN
+_tailogs_slash_nochars_pattern() {
+    SLASHED_PATTERN=$(sed -E 's/([^a-z ])/\\\1/g' <<< "$PATTERN")
+}
+
+# return STAR_PATTERN
+_tailogs_pattern_to_stars() {
+    _tailogs_slash_nochars_pattern #SLASHED_PATTERN
+    STAR_PATTERN=$(sed -E 's/(\w+)/(.*)/g' <<< "$SLASHED_PATTERN")
+}
+
+# use PATTERN
+# return PATTERN_ITEMS
+_tailogs_set_pattern_items() {
+    PATTERN_ITEMS=($(sed -E 's/[^a-z]+/ /g' <<< "$PATTERN"))
+}
+ 
+# use PATTERN_ITEMS
+# return INDEX
+_tailogs_getindex_from_item() {
+    for i in "${!PATTERN_ITEMS[@]}"; do
+        if [[ $1 == "${PATTERN_ITEMS[$i]}" ]]; then INDEX=$(($i+1)); return; fi
     done
 }
 
-_tailogs_replace_pattern_by_index() {
-    for i in "${!ARRAY[@]}"; do
-        local name="${ARRAY[$i]}"
-        _tailogs_getindex $name RES
-        index=$RES
-        NEW_PAT=$(sed "s/$name/\\\\$index/g" <<< $NEW_PAT)
+# use NEW_PATTERN, PATTERN_ITEMS
+# return INDEXED_NEWPATTERN
+_tailogs_replace_newpattern_by_indexes() {
+    INDEXED_NEWPATTERN=$NEW_PATTERN
+    for i in "${!PATTERN_ITEMS[@]}"; do
+        local item="${PATTERN_ITEMS[$i]}"
+        _tailogs_getindex_from_item $item INDEX
+        INDEXED_NEWPATTERN=$(sed "s/$item/\\\\$INDEX/g" <<< $INDEXED_NEWPATTERN)
     done
 }
 
+_tailogs_process_pattern() {
+    _tailogs_pattern_to_stars #STAR_PATTERN=(.*)\-(.*)\: (.*) (.*)
+    _tailogs_set_pattern_items #PATTERN_ITEMS=txton txtwo date time
+    _tailogs_replace_newpattern_by_indexes #INDEXED_NEWPATTERN=\1-\2: \4 \3?
+}
+
+### OUTPUT ###
+
+# return SIZE_TERM
+_tailogs_set_size_term() {
+    SIZE_TERM=$(stty size | cut -d ' ' -f 2)
+    SIZE_TERM=$(($SIZE_TERM-1))
+}
+
+### RUN ###
+
+# use FILEPATH, SIZE_TERM, GREP_PATTERN, TYPE
 _tailogs_run_tail() {
     tail $FILEPATH | \
     cut -c -$SIZE_TERM | \
@@ -58,57 +107,25 @@ _tailogs_run_tail() {
     # ccze -A
 }
 
-_dev_config() {
-    PATTERN="txton-txtwo: date  time"
-    NEW_PATTERN="txton-txtwo: time date?"
-}
-
 ########
 # MAIN #
 ########
-
 main() {
+    RES=
+    _dev_config
+    #PATTERN="txton-txtwo: date  time"
+    #NEW_PATTERN="txton-txtwo: time date?"
 
-RES=''
+    _tailogs_process_pattern #STAR_PATTERN, INDEXED_NEWPATTERN
+    APACHE=("$STAR_PATTERN" "$INDEXED_NEWPATTERN")
 
-_dev_config
+    _tailogs_getoptions "$@"
+    _tailogs_set_size_term #SIZE_TERM
 
-#PATTERN="[date time] name.type: message"
-#NEW_PATTERN="type:name date"
-
-#APACHE=("(snc_redis).(DEBUG)" "\2.\1")
-#PATTERN="[date time] name.type: message"
-
-
-M_PATTERN=$(sed -E 's/([^a-z ])/\\\1/g' <<< "$PATTERN")
-M_PATTERN=$(sed -E 's/(\w+)/(.*)/g' <<< "$M_PATTERN")
-# date time name type message
-ARRAY=($(sed -E 's/[^a-z]+/ /g' <<< "$PATTERN"))
-
-NEW_PAT=$NEW_PATTERN
-
-
-_tailogs_replace_pattern_by_index
-#echo $NEW_PAT
-
-
-#APACHE=("\[(.*) (.*)\] (.*)\.(.*): (.*)" "\1.\5")
-APACHE=("$M_PATTERN" "$NEW_PAT")
-#echo $M_PATTERN;
-
-_tailogs_getoptions "$@"
-TYPE=("${APACHE[@]}")
-
-export SIZE_TERM=$(stty size | cut -d ' ' -f 2)
-SIZE_TERM=$(($SIZE_TERM-1))
-
-FILEPATH=/var/log/apt/history.log
-
-# RUN
-_tailogs_run_tail
-
+    # RUN #
+    TYPE=("${APACHE[@]}")
+    _tailogs_run_tail
 }
-
 main "$@"
 
 
