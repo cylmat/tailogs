@@ -4,4 +4,4 @@ Tail logs files with colors and rewriting
 
 License
 -------
-[Tailogs](https://github.com/cylmat/tailogs) is licensed under the [MIT License](https://github.com/cylmat/tailogs/blob/main/LICENSE).
+Tailogs is licensed under the [MIT License](https://github.com/cylmat/tailogs/blob/main/LICENSE).
