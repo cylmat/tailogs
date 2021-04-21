@@ -41,6 +41,14 @@ _dev_config() {
     FILEPATH=/var/log/apt/history.log
     PATTERN="txton-txtwo: date  time"
     NEW_PATTERN="txton-txtwo: time date?"
+    APACHE=("$PATTERN" "$NEW_PATTERN")
+    TYPE='APACHE'
+}
+
+_tailogs_get_patterns_from_config() {
+    CONFIG_PATTERNS=("${APACHE[@]}")
+    PATTERN="${CONFIG_PATTERNS[0]}"
+    NEW_PATTERN="${CONFIG_PATTERNS[1]}"
 }
 
 ### PROCESS ###
@@ -82,6 +90,7 @@ _tailogs_replace_newpattern_by_indexes() {
     done
 }
 
+# use PATTERN, NEW_PATTERN
 _tailogs_process_pattern() {
     _tailogs_pattern_to_stars #STAR_PATTERN=(.*)\-(.*)\: (.*) (.*)
     _tailogs_set_pattern_items #PATTERN_ITEMS=txton txtwo date time
@@ -98,12 +107,13 @@ _tailogs_set_size_term() {
 
 ### RUN ###
 
-# use FILEPATH, SIZE_TERM, GREP_PATTERN, TYPE
+# use FILEPATH, SIZE_TERM, GREP_PATTERN
+# use STAR_PATTERN, INDEXED_NEWPATTERN
 _tailogs_run_tail() {
     tail $FILEPATH | \
     cut -c -$SIZE_TERM | \
     grep --color "$GREP_PATTERN" | \
-    sed -E "s/${TYPE[0]}/${TYPE[1]}/"
+    sed -E "s/$STAR_PATTERN/$INDEXED_NEWPATTERN/"
     # ccze -A
 }
 
@@ -116,14 +126,14 @@ main() {
     #PATTERN="txton-txtwo: date  time"
     #NEW_PATTERN="txton-txtwo: time date?"
 
+    # process
+    _tailogs_get_patterns_from_config
     _tailogs_process_pattern #STAR_PATTERN, INDEXED_NEWPATTERN
-    APACHE=("$STAR_PATTERN" "$INDEXED_NEWPATTERN")
-
+    # options
     _tailogs_getoptions "$@"
     _tailogs_set_size_term #SIZE_TERM
 
     # RUN #
-    TYPE=("${APACHE[@]}")
     _tailogs_run_tail
 }
 main "$@"
