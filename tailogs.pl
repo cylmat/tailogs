@@ -9,7 +9,11 @@ use warnings;
 # Define commands #
 ###################
 
-sub dev_config()
-{
+sub dev_config {
 
+}
+
+sub tail {
+  open my $pipe, "-|", "/usr/bin/tail", "-f", "/var/log/apt/history.log" or die "could not start tail on SampleLog.log: $!";
+  print while <$pipe>;
 }
