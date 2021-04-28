@@ -37,6 +37,7 @@ use constant TAIL => "/usr/bin/tail";
 use constant REGEX_CHARS => "[a-z ]";
 use constant REGEX_NOCHARS => "[^a-z ]";
 
+=begin
 sub sed_args($$) {
   my $pattern = $_[0];
   my $replacement = $_[1];
@@ -46,8 +47,18 @@ sub sed_args($$) {
 
   return $replaced;
 }
+=cut
 
-sub pattern_to_items($) { # separated by space
+sub sed_args($$) {
+  my $pattern = $_[0];
+  my $replacement = $_[1];
+
+  $pattern =~ /$replacement/;
+
+  return $pattern;
+}
+
+sub split_spaces($) { # separated by space
     return split(/ /, "@_"); # alpha msg => [alpha, msg]
 }
 
@@ -90,7 +101,7 @@ sub get_config {
 sub slash_nochars_pattern($) {
   my $pattern = "@_";
   my $backslash = "\\\\";
-  my $slashed_pattern = sed_args($pattern, "s/(".REGEX_NOCHARS.")/$backslash\\1/g");
+  my $slashed_pattern = #sed_args($pattern, "s/(".REGEX_NOCHARS.")/$backslash\\1/g");
   return $slashed_pattern; # alpha:msg => alpha\:msg
 }
 
@@ -98,6 +109,14 @@ sub pattern_to_stars($) {
     my $slashed_pattern = "@_";
     my $star_pattern = sed_args($slashed_pattern, "s/([a-z]+)/(.*)/g");
     return $star_pattern; # alpha msg => (.*) (.*)
+}
+
+sub pattern_to_items($) {
+    my $pattern = "@_";
+    $pattern = sed_args($pattern, "s/[ ]+/ /g"); # trim multiple spaces
+    my $only_items = sed_args($pattern, "s/[^a-z ]//g");
+    my @items_list = split_spaces($only_items);
+    return @items_list;
 }
 
 # actual: pattern alpha => 0 1
@@ -110,6 +129,14 @@ sub process_patterns($$) {
     my $slashed_pattern = slash_nochars_pattern($pattern); # alpha\: beta
     my $star_pattern = pattern_to_stars($slashed_pattern); # (.*)\: (.*)
     my @actual_items = pattern_to_items($pattern); # [alpha, beta]
+
+    my $i = 0; my $val = "command";
+    foreach (@actual_items) {
+        print "$actual_items[$i] az ";
+        if ("$actual_items[$i]" eq $val) {}
+        $i++;
+    }
+    exit;
 
     my $new_pattern_by_items = "$new_pattern";
     for my $item_name (@actual_items) { # alpha beta gamma => 0 1 2
