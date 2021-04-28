@@ -29,13 +29,31 @@ use warnings;
 #   print "\n"; 
 #   } 
 
-###################
-# Define commands #
-###################
+##########
+# GLOBAL #
+##########
 
 use constant TAIL => "/usr/bin/tail";
 use constant REGEX_CHARS => "[a-z ]";
 use constant REGEX_NOCHARS => "[^a-z ]";
+
+sub sed_args($$) {
+  my $pattern = $_[0];
+  my $replacement = $_[1];
+
+  my $command = "echo '$pattern' | sed -E '$replacement'";
+  my $replaced = `$command`;
+
+  return $replaced;
+}
+
+sub pattern_to_items($) { # separated by space
+    return @pattern_items = split(/ /, "@_"); # alpha msg => [alpha, msg]
+}
+
+###################
+# Define commands #
+###################
 
 # for my $family ( sort keys %HoA ) {
 #   print "$family: "; 
@@ -49,7 +67,8 @@ sub get_config {
   my %config = ();
   
   @config{'apache'} = {
-    "filename" => "/var/log/apt/history.log",
+    #"filename" => "/var/log/apt/history.log",
+    "filename" => "/var/log/commerce.log",
     "actual_patterns" => [
       "command: msg",
       "install: msg2",
@@ -70,11 +89,15 @@ sub get_config {
 ###########
 sub slash_nochars_pattern($) {
   my $pattern = "@_";
-  
-  my $command = "echo '$pattern' | sed -E 's/(".REGEX_NOCHARS.")/\\\\\\1/g'";
-  my $slashed_pattern = `$command`;
+  my $backslash = "\\\\";
+  my $slashed_pattern = sed_args($pattern, "s/(".REGEX_NOCHARS.")/$backslash\\1/g");
+  return $slashed_pattern; # alpha:msg => alpha\:msg
+}
 
-  return $slashed_pattern;
+sub pattern_to_stars($) {
+    my $slashed_pattern = "@_";
+    my $star_pattern = sed_args($slashed_pattern, "s/([a-z]+)/(.*)/g");
+    return $star_pattern; # alpha msg => (.*) (.*)
 }
 
 ########
@@ -104,6 +127,7 @@ sub main {
 
   # process
   my $slashed_pattern = slash_nochars_pattern($pattern);
+  my $star_pattern = pattern_to_stars($slashed_pattern);
 
   # run
   run_tail(%config);
