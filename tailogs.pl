@@ -11,6 +11,8 @@ use warnings;
 # foreach my $k (sort keys %config) { print "$k => $config{$k}\n"; }
 # while ( ($k,$v) = each %hash ) { print "$k => $v\n"; }
 #
+  # "${config{apache}{filename}}";
+  # "${config{apache}{actual_patterns}[1]}";
 #
 # my %HoA = ( 
 #   flintstones => [
@@ -32,6 +34,8 @@ use warnings;
 ###################
 
 use constant TAIL => "/usr/bin/tail";
+use constant REGEX_CHARS => "[a-z ]";
+use constant REGEX_NOCHARS => "[^a-z ]";
 
 # for my $family ( sort keys %HoA ) {
 #   print "$family: "; 
@@ -43,32 +47,35 @@ use constant TAIL => "/usr/bin/tail";
 
 sub get_config {
   my %config = ();
-  my $filename = "/var/log/apt/history.log";
+  
+  @config{'apache'} = {
+    "filename" => "/var/log/apt/history.log",
+    "actual_patterns" => [
+      "command: msg",
+      "install: msg2",
+      "txtdate: date time"
+    ],
+    "new_patterns" => [
+      "msg-command",
+      "msg2 local",
+      "date date time&time"
+    ]
+  };
 
-  $config{'filename'} = $filename;
-  my @actual_patterns = [
-    "command: msg",
-    "install: msg2",
-    "txtdate: date time"
-  ];
-  my @new_pattern = [
-    "msg-command",
-    "msg2 local",
-    "date date time time"
-  ];
-  @config{'actual_pattern'} = @actual_patterns;
-  @config{'new_pattern'} = @new_pattern;
-
-  while (my ($index, $elem) = each @{$config{'actual_pattern'}}) {
-    print "$elem\n";
-  }
-  exit;
   return %config;
 }
 
 ###########
 # PROCESS #
 ###########
+sub slash_nochars_pattern($) {
+  my $pattern = "@_";
+  
+  my $command = "echo '$pattern' | sed -E 's/(".REGEX_NOCHARS.")/\\\\\\1/g'";
+  my $slashed_pattern = `$command`;
+
+  return $slashed_pattern;
+}
 
 ########
 # MAIN #
@@ -76,19 +83,29 @@ sub get_config {
 
 sub run_tail(%) {
   my %config = @_;
-  
+  #print "${config{apache}{actual_patterns}[1]}";
+
+  # ARGS #
   my @args = ("-n 3");
-  push(@args, $config{'filename'});
+  push(@args, $config{'apache'}{'filename'});
 
   my $tail_args = TAIL . " @args";
   #print $tail_args; exit; #DEBUG
 
+  # RUN TAIL #
   open my $tail_pipe, "-|", $tail_args or die "Error - Could not start tail on $config{'filename'}: $!";
   print while <$tail_pipe>;
 }
 
 sub main {
   my %config = get_config();
+  my @patterns = ${config{'apache'}{'actual_patterns'}[0]};
+  my $pattern = "${patterns[0]}";
+
+  # process
+  my $slashed_pattern = slash_nochars_pattern($pattern);
+
+  # run
   run_tail(%config);
 }
 
