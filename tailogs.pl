@@ -48,7 +48,7 @@ sub sed_args($$) {
 }
 
 sub pattern_to_items($) { # separated by space
-    return @pattern_items = split(/ /, "@_"); # alpha msg => [alpha, msg]
+    return split(/ /, "@_"); # alpha msg => [alpha, msg]
 }
 
 ###################
@@ -100,6 +100,26 @@ sub pattern_to_stars($) {
     return $star_pattern; # alpha msg => (.*) (.*)
 }
 
+# actual: pattern alpha => 0 1
+# new   : alpha pattern => \1 \0
+# replace actual star "(.*) (.*)" by new with indexes "\1 \0"
+sub process_patterns($$) {
+    my $pattern = "$_[0]";
+    my $new_pattern = "$_[1]";
+
+    my $slashed_pattern = slash_nochars_pattern($pattern); # alpha\: beta
+    my $star_pattern = pattern_to_stars($slashed_pattern); # (.*)\: (.*)
+    my @actual_items = pattern_to_items($pattern); # [alpha, beta]
+
+    my $new_pattern_by_items = "$new_pattern";
+    for my $item_name (@actual_items) { # alpha beta gamma => 0 1 2
+        my $index = "";
+        $new_pattern_by_items = sed_args($new_pattern_by_items, "s/($item_name)/$index/g"); 
+    }
+
+    return $new_pattern_by_items;
+}
+
 ########
 # MAIN #
 ########
@@ -121,13 +141,15 @@ sub run_tail(%) {
 }
 
 sub main {
+  # config
   my %config = get_config();
-  my @patterns = ${config{'apache'}{'actual_patterns'}[0]};
-  my $pattern = "${patterns[0]}";
+  my @actual_patterns = ${config{'apache'}{'actual_patterns'}[0]};
+  my @new_patterns = ${config{'apache'}{'new_patterns'}[0]};
+  my $pattern = "${actual_patterns[0]}";
+  my $new_pattern = "${new_patterns[0]}";
 
   # process
-  my $slashed_pattern = slash_nochars_pattern($pattern);
-  my $star_pattern = pattern_to_stars($slashed_pattern);
+  my $new_one = process_patterns($pattern, $new_pattern);
 
   # run
   run_tail(%config);
