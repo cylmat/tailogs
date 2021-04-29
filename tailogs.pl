@@ -51,6 +51,22 @@ sub split_spaces($) { # separated by space
   return split(/ /, "@_"); # alpha msg => [alpha, msg]
 }
 
+sub get_index($@) { # search_value, @array
+  my $value = $_[0];
+  my @array = @{$_[1]};
+
+  my $i = 0; 
+  my $index = -1;
+  foreach (@array) {
+      if ("$array[$i]" eq $value) { 
+        $index = $i; 
+      }
+      $i++;
+  }
+
+  return $index; # beta [alpha, beta] => 1
+}
+
 ###################
 # Define commands #
 ###################
@@ -118,18 +134,12 @@ sub process_patterns($$) {
   my $star_pattern = pattern_to_stars($slashed_pattern); # (.*)\: (.*)
   my @actual_items = pattern_to_items($pattern); # [alpha, beta]
 
-  my $i = 0; my $val = "command";
-  foreach (@actual_items) {
-      print "$actual_items[$i] az ";
-      if ("$actual_items[$i]" eq $val) {}
-      $i++;
-  }
-  exit;
+  #my $index = get_index('msg', \@actual_items);
 
   my $new_pattern_by_items = "$new_pattern";
   for my $item_name (@actual_items) { # alpha beta gamma => 0 1 2
-      my $index = "";
-      $new_pattern_by_items = replace($new_pattern_by_items, "($item_name)", "$index"); 
+    my $index = get_index($item_name, \@actual_items);
+    $new_pattern_by_items = replace($new_pattern_by_items, "($item_name)", "\\\\$index"); 
   }
 
   return $new_pattern_by_items;
