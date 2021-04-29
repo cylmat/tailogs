@@ -37,18 +37,6 @@ use constant TAIL => "/usr/bin/tail";
 use constant REGEX_CHARS => "[a-z ]";
 use constant REGEX_NOCHARS => "[^a-z ]";
 
-=begin
-sub replace($$) {
-  my $pattern = $_[0];
-  my $replacement = $_[1];
-
-  my $command = "echo '$pattern' | sed -E '$replacement'";
-  my $replaced = `$command`;
-
-  return $replaced;
-}
-=cut
-
 sub replace($$$) {
   my $pattern = $_[0];
   my $actual = $_[1];
