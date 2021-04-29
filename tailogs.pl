@@ -33,7 +33,6 @@ use warnings;
 # GLOBAL #
 ##########
 
-use constant TAIL => "/usr/bin/tail";
 use constant REGEX_CHARS => "[a-z ]";
 use constant REGEX_NOCHARS => "[^a-z ]";
 
@@ -123,9 +122,9 @@ sub pattern_to_items($) {
   return @items_list;
 }
 
-# actual: pattern alpha => 0 1
+# actual: pattern alpha => 0:1
 # new   : alpha pattern => \1 \0
-# replace actual star "(.*) (.*)" by new with indexes "\1 \0"
+# replace actual star "(.*):(.*)" by new with indexes "\1 \0"
 sub process_patterns($$) {
   my $pattern = "$_[0]";
   my $new_pattern = "$_[1]";
@@ -133,8 +132,6 @@ sub process_patterns($$) {
   my $slashed_pattern = slash_nochars_pattern($pattern); # alpha\: beta
   my $star_pattern = pattern_to_stars($slashed_pattern); # (.*)\: (.*)
   my @actual_items = pattern_to_items($pattern); # [alpha, beta]
-
-  #my $index = get_index('msg', \@actual_items);
 
   my $new_pattern_by_items = "$new_pattern";
   for my $item_name (@actual_items) { # alpha beta gamma => 0 1 2
@@ -150,34 +147,62 @@ sub process_patterns($$) {
 ########
 
 sub run_tail(%) {
-  my %config = @_;
+  my %params = @_;
   #print "${config{apache}{actual_patterns}[1]}";
 
-  # ARGS #
-  my @args = ("-n 3");
-  push(@args, $config{'apache'}{'filename'});
+  use constant TAIL => "/usr/bin/tail ";
+  use constant PIPE => " | ";
+  
+  my @args = ();
+  my @pipes = ();
 
-  my $tail_args = TAIL . " @args";
-  #print $tail_args; exit; #DEBUG
+  ###
+  # Tail args #
+  push(@args, "-n 3 ");
+  push(@args, $params{'filename'});
+
+  ###
+  # Pipes
+
+  # Grep
+  my $grep = "grep ";
+  $grep .= "'\.' ";
+
+  # Sed
+  my $sed = "sed -E ";
+  $sed .= "'s/(.*)/\\1/g' ";
+
+  ###
+  # Final command #
+  push(@pipes, PIPE."$grep".PIPE."$sed");
+  my $command = TAIL."@args"."@pipes";
+  #print $command; exit; #DEBUG
 
   # RUN TAIL #
-  open my $tail_pipe, "-|", $tail_args or die "Error - Could not start tail on $config{'filename'}: $!";
+  open my $tail_pipe, "-|", $command or die "Error - Could not start tail on $params{'filename'}: $!";
   print while <$tail_pipe>;
 }
 
 sub main {
-  # config
+  # Config
   my %config = get_config();
   my @actual_patterns = ${config{'apache'}{'actual_patterns'}[0]};
   my @new_patterns = ${config{'apache'}{'new_patterns'}[0]};
+
+  # @TODO foreach
   my $pattern = "${actual_patterns[0]}";
   my $new_pattern = "${new_patterns[0]}";
 
-  # process
+  # Process
   my $new_one = process_patterns($pattern, $new_pattern);
 
-  # run
-  run_tail(%config);
+  # Run
+  my %params = (
+    'filename' => $config{'apache'}{'filename'},
+    'pattern' => $pattern,
+    'new_one' => $new_one
+  );
+  run_tail(%params);
 }
 
 main();
