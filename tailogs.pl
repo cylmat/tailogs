@@ -39,9 +39,9 @@ use constant REGEX_NOCHARS => "[^a-z ]";
 sub replace($$$) {
   my $pattern = $_[0];
   my $actual = $_[1];
-  my $replace = '"'.$_[2].'"'; # used for /ee evaluation
+  my $replace = '"'.$_[2].'"'; # used for /ee global evaluation
 
-  $pattern =~ s/$actual/$replace/ee;
+  $pattern =~ s/$actual/$replace/eeg;
 
   return $pattern;
 }
@@ -86,12 +86,12 @@ sub get_config {
     #"filename" => "/var/log/commerce.log",
     "actual_patterns" => [
       "command: msg",
-      "install: msg2",
+      "install: msg",
       "txtdate: date time"
     ],
     "new_patterns" => [
-      "msg-command",
-      "msg2 local",
+      "31msg0 <=> 32command0",
+      "msgtwo local",
       "date date time&time"
     ]
   };
@@ -122,6 +122,15 @@ sub pattern_to_items($) {
   return @items_list;
 }
 
+sub number_to_color($) {
+  # \033[0;31m
+  # \033[0m
+  my $pattern = "@_";
+  my $colorized_pattern = replace($pattern, "0", '\\033[0m');
+  $colorized_pattern = replace($colorized_pattern, "([1-9][1-9])", '\\033[0;$1m');
+  return $colorized_pattern; # alpha msg => (.*) (.*)
+}
+
 # actual: pattern alpha => 0:1
 # new   : alpha pattern => \1 \0
 # replace actual star "(.*):(.*)" by new with indexes "\1 \0"
@@ -132,10 +141,13 @@ sub process_patterns($$) {
   my $slashed_pattern = slash_nochars_pattern($pattern); # alpha\: beta
   my $star_pattern = pattern_to_stars($slashed_pattern); # (.*)\: (.*)
   my @actual_items = pattern_to_items($pattern); # [alpha, beta]
+  
+  # Colors
+  $new_pattern = number_to_color($new_pattern);
 
   my $new_pattern_by_items = "$new_pattern";
   for my $item_name (@actual_items) { # alpha beta gamma => 0 1 2
-    my $index = get_index($item_name, \@actual_items);
+    my $index = get_index($item_name, \@actual_items)+1;
     $new_pattern_by_items = replace($new_pattern_by_items, "($item_name)", "\\\\$index"); 
   }
 
@@ -170,7 +182,7 @@ sub run_tail(%) {
 
   # Sed
   my $sed = "sed -E ";
-  $sed .= "'s/(.*)/\\1/g' ";
+  $sed .= "'s/$params{'pattern'}/$params{'new_one'}/g' ";
 
   ###
   # Final command #
@@ -194,13 +206,16 @@ sub main {
   my $new_pattern = "${new_patterns[0]}";
 
   # Process
+  my $slashed_pattern = slash_nochars_pattern($pattern); # alpha\: beta
+  my $star_pattern = pattern_to_stars($slashed_pattern); # (.*)\: (.*)
+
   my $new_one = process_patterns($pattern, $new_pattern);
 
   # Run
   my %params = (
     'filename' => $config{'apache'}{'filename'},
-    'pattern' => $pattern,
-    'new_one' => $new_one
+    'pattern' => $star_pattern,
+    'new_one' => "$new_one"
   );
   run_tail(%params);
 }
