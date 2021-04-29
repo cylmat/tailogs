@@ -47,7 +47,7 @@ sub get_index($@) { # search_value, @array
 }
 
 sub dd($) {
-    print $_[0]; exit;
+    print $_[0]."\n"; exit;
 }
 
 sub debug($) {
@@ -74,12 +74,12 @@ sub get_config {
     #"filename" => "/var/log/commerce.log",
     "actual_patterns" => [
       "Commandline: <command> -y <msg>",
-      "install: msg",
+      "Install: <msg>:<type>",
       "txtdate: date time"
     ],
     "new_patterns" => [
       "Commandline: 31<msg>0 <=> 32<command>0",
-      "msgtwo local",
+      "<type> -> installed is 32<msg>0",
       "date date time&time"
     ]
   };
@@ -90,16 +90,6 @@ sub get_config {
 ###########
 # PROCESS #
 ###########
-
-=begin
-SLASH command\: msg
-STAR (.*)\: (.*)
-ITEMS command msg
-ITEMSLIST command msg
-NEW 31msg0 <=> 32command0
-COLORNEW msg <=> command
-NEW_BY_ITEMS \2 <=> \1
-=cut
 
 sub slash_nochars_pattern($) {
   my $pattern = "@_";
@@ -184,8 +174,12 @@ sub run_tail(%) {
   $grep .= "'\.' ";
 
   # Sed
-  my $sed = "sed -E ";
-  $sed .= "'s/$params{'pattern'}/$params{'new_one'}/g' ";
+  my $sed = "";
+  for (my $i = 0; $i <= 100; $i++) {
+    my $a = 'actual'.$i;
+    my $n = 'new'.$i;
+    $sed .= "sed -E 's/$params{$a}/$params{$n}/g' ";
+  }
 
   ###
   # Final command #
@@ -201,25 +195,38 @@ sub run_tail(%) {
 sub main {
   # Config
   my %config = get_config();
-  my @actual_patterns = ${config{'apache'}{'actual_patterns'}[0]};
-  my @new_patterns = ${config{'apache'}{'new_patterns'}[0]};
+  my @actual_patterns = ${config{'apache'}{'actual_patterns'}};
+  my @new_patterns = ${config{'apache'}{'new_patterns'}};
+
+  for (my $i=0; $i<100; $i++) {
+    if (!defined(${config{'apache'}{'new_patterns'}[$i]})) {
+        last;
+    }
+    print ${config{'apache'}{'new_patterns'}[$i]};
+  }
+
+  exit;
 
   # @TODO foreach
-  my $pattern = "${actual_patterns[0]}";
-  my $new_pattern = "${new_patterns[0]}";
+  my $pattern = "${actual_patterns[0][0]}";
+  my $new_pattern = "${new_patterns[0][0]}";
+
+
 
   # Process
-  #my $slashed_pattern = slash_nochars_pattern($pattern); # alpha\: beta
-  my $star_pattern = pattern_to_stars($pattern); # (.*)\: (.*)
+  my %params = (
+    'filename' => $config{'apache'}{'filename'}
+  );
 
-  my $new_one = process_patterns($pattern, $new_pattern);
+  for (my $i = 0; $i <= 1; $i++) {
+    my $star_pattern = pattern_to_stars($pattern); # (.*)\: (.*)
+    my $new_one = process_patterns($pattern, $new_pattern);
+
+    $params{'actual'.$i} = $star_pattern;
+    $params{'new'.$i} = $new_one;
+  }
 
   # Run
-  my %params = (
-    'filename' => $config{'apache'}{'filename'},
-    'pattern' => $star_pattern,
-    'new_one' => "$new_one"
-  );
   run_tail(%params);
 }
 
