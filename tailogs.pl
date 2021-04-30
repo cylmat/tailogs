@@ -75,12 +75,14 @@ sub get_config {
     "actual_patterns" => [
       "Commandline: <command> -y <msg>",
       "Install: <msg>:<type>",
-      "<txtdate>: <date> <time>"
+      "<txtdate>: <date> <time>",
+      "<ubuntu> -> <rewrited>"
     ],
     "new_patterns" => [
       "Commandline: 31<msg>0 <=> 32<command>0",
       "<type> -> installed is 32<msg>0",
-      "<date> <date> <time> ERT <time>"
+      "<date> <date> <time> ERT <time>",
+      "<ubuntu> *** <rewrited>"
     ]
   };
 
@@ -176,6 +178,8 @@ sub run_tail(%) {
 
   # Sed
   my $sed = "";
+  use constant TOKEN => 'TOKEN'; # Avoid duplicate line replacement
+
   for (my $i = 0; $i <= $count; $i++) {
     my $a = 'actual'.$i;
     my $n = 'new'.$i;
@@ -183,8 +187,12 @@ sub run_tail(%) {
       print "Patterns not founds.\n" || exit(2);
     }
 
-    $sed .= ($i>0 ? PIPE : '') . "sed -E 's/$params{$a}/$params{$n}/g' ";
+    my $replace = TOKEN."$params{$n}";
+    my $sed_token = "/^".TOKEN."/!s";
+    $sed .= ($i>0 ? PIPE : '') . "sed -E '$sed_token/$params{$a}/$replace/g' ";
   }
+  # Remove Sed begin line's tokens
+  $sed .= PIPE . "sed -E 's/".TOKEN."//g' ";
 
   ###
   # Final command #
