@@ -188,8 +188,8 @@ sub run_tail(%) {
     }
 
     my $replace = TOKEN."$params{$n}";
-    my $sed_token = "/^".TOKEN."/!s";
-    $sed .= ($i>0 ? PIPE : '') . "sed -E '$sed_token/$params{$a}/$replace/g' ";
+    my $sed_not_begin_with = "/^".TOKEN."/!s";
+    $sed .= ($i>0 ? PIPE : '') . "sed -E '$sed_not_begin_with/$params{$a}/$replace/g' ";
   }
   # Remove Sed begin line's tokens
   $sed .= PIPE . "sed -E 's/".TOKEN."//g' ";
