@@ -39,10 +39,6 @@ sub get_index($@) { # search_value, @array
   return $index; # beta [alpha, beta] => 1
 }
 
-sub dd($) {
-    print $_[0]."\n"; exit;
-}
-
 ###################
 # Define commands #
 ###################
