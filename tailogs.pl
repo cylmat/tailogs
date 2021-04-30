@@ -84,33 +84,29 @@ sub get_config {
 # PROCESS #
 ###########
 
-sub slash_nochars_pattern($) {
-  my $pattern = "@_";
-  my $slashed_pattern = replace($pattern, "([^a-z<> ])", '\\\\$1');
+sub slash_nochars_pattern($) { # $pattern
+  my $slashed_pattern = replace("@_", "([^a-z<> ])", '\\\\$1');
   debug("SLASH $slashed_pattern");
   return $slashed_pattern; # <alpha>: <msg> => <alpha>\: <msg>
 }
 
-sub pattern_to_stars($) {
-  my $slashed_pattern = "@_";
-  my $star_pattern = replace($slashed_pattern, "(<[a-z]+>)", "(.*)");
+sub pattern_to_stars($) { # $slashed_pattern
+  my $star_pattern = replace("@_", "(<[a-z]+>)", "(.*)");
   debug("STAR $star_pattern");
   return $star_pattern; # <alpha> <msg> => (.*) (.*)
 }
 
-sub pattern_to_items($) {
-  my $pattern = "@_";
-  $pattern = replace($pattern, "\\s+", " "); # Trim multiple spaces
+sub pattern_to_items($) { # $pattern
+  my $pattern = replace("@_", "\\s+", " "); # Trim multiple spaces
   my @items_list = ( $pattern =~ /(<[a-z]+>)/g );
   debug("ITEMSLIST @items_list");
   return @items_list;
 }
 
-sub number_to_color($) {
+sub number_to_color($) { # $pattern
   # \033[0;31m
   # \033[0m
-  my $pattern = "@_";
-  my $colorized_pattern = replace($pattern, "0", '\\033[0m');
+  my $colorized_pattern = replace("@_", "0", '\\033[0m');
   $colorized_pattern = replace($colorized_pattern, "([1-9][1-9])", '\\033[0;$1m');
   return $colorized_pattern; # alpha msg => (.*) (.*)
 }
@@ -119,16 +115,16 @@ sub number_to_color($) {
 # new   : alpha pattern => \1 \0
 # replace actual star "(.*):(.*)" by new with indexes "\1 \0"
 sub process_patterns($$) {
-  my $pattern = "$_[0]";
-  my $new_pattern = "$_[1]";
+  # my $pattern = "$_[0]";
+  # my $new_pattern = "$_[1]";
 
   #my $slashed_pattern = slash_nochars_pattern($pattern); # alpha\: beta
-  my $star_pattern = pattern_to_stars($pattern); # (.*)\: (.*)
-  my @actual_items = pattern_to_items($pattern); # [alpha, beta]
+  my $star_pattern = pattern_to_stars("$_[0]"); # (.*)\: (.*)
+  my @actual_items = pattern_to_items("$_[0]"); # [alpha, beta]
   
   # Colors
-  debug("NEW $new_pattern");
-  $new_pattern = number_to_color($new_pattern);
+  debug("NEW $_[1]");
+  my $new_pattern = number_to_color("$_[1]");
   debug("COLORNEW $new_pattern");
 
   my $new_pattern_by_items = "$new_pattern";
