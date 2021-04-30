@@ -58,20 +58,11 @@ sub debug($) {
 # Define commands #
 ###################
 
-# for my $family ( sort keys %HoA ) {
-#   print "$family: "; 
-#   while (my ($index, $elem) = each @{$HoA{$family}}) {
-#     print "$index $elem ";
-#   }
-#   print "\n";
-# }
-
 sub get_config {
   my %config = ();
   
   @config{'apache'} = {
     "filename" => "/var/log/apt/history.log",
-    #"filename" => "/var/log/commerce.log",
     "actual_patterns" => [
       "Commandline: <command> -y <msg>",
       "Install: <msg>:<type>",
@@ -178,7 +169,7 @@ sub run_tail(%) {
 
   # Sed
   my $sed = "";
-  use constant TOKEN => 'TOKEN'; # Avoid duplicate line replacement
+  use constant TOKEN => 'TAILOGSTOKEN1'; # Avoid duplicate line replacement
 
   for (my $i = 0; $i <= $count; $i++) {
     my $a = 'actual'.$i;
