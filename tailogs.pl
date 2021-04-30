@@ -75,12 +75,12 @@ sub get_config {
     "actual_patterns" => [
       "Commandline: <command> -y <msg>",
       "Install: <msg>:<type>",
-      "txtdate: date time"
+      "<txtdate>: <date> <time>"
     ],
     "new_patterns" => [
       "Commandline: 31<msg>0 <=> 32<command>0",
       "<type> -> installed is 32<msg>0",
-      "date date time&time"
+      "<date> <date> <time> ERT <time>"
     ]
   };
 
@@ -153,6 +153,7 @@ sub process_patterns($$) {
 
 sub run_tail(%) {
   my %params = @_;
+  my $count = $params{'count'};
   #print "${config{apache}{actual_patterns}[1]}";
 
   use constant TAIL => "/usr/bin/tail ";
@@ -175,10 +176,14 @@ sub run_tail(%) {
 
   # Sed
   my $sed = "";
-  for (my $i = 0; $i <= 100; $i++) {
+  for (my $i = 0; $i <= $count; $i++) {
     my $a = 'actual'.$i;
     my $n = 'new'.$i;
-    $sed .= "sed -E 's/$params{$a}/$params{$n}/g' ";
+    if (!defined($params{$a}) || !defined($params{$n})) {
+      print "Patterns not founds.\n" || exit(2);
+    }
+
+    $sed .= ($i>0 ? PIPE : '') . "sed -E 's/$params{$a}/$params{$n}/g' ";
   }
 
   ###
@@ -195,32 +200,38 @@ sub run_tail(%) {
 sub main {
   # Config
   my %config = get_config();
-  my @actual_patterns = ${config{'apache'}{'actual_patterns'}};
-  my @new_patterns = ${config{'apache'}{'new_patterns'}};
+  my @actual_patterns = ();
+  my @new_patterns = ();
+  my $count = undef;
 
   for (my $i=0; $i<100; $i++) {
-    if (!defined(${config{'apache'}{'new_patterns'}[$i]})) {
+    my $actual = ${config{'apache'}{'actual_patterns'}[$i]};
+    my $new = ${config{'apache'}{'new_patterns'}[$i]};
+    if (!defined($actual) || !defined($new)) {
         last;
     }
-    print ${config{'apache'}{'new_patterns'}[$i]};
+    push(@actual_patterns, $actual);
+    push(@new_patterns, $new);
+    $count = $i;
   }
 
-  exit;
-
-  # @TODO foreach
-  my $pattern = "${actual_patterns[0][0]}";
-  my $new_pattern = "${new_patterns[0][0]}";
-
-
+  if (!defined($count)) {
+      print "Impossible to read patterns." || exit(3);
+  }
 
   # Process
   my %params = (
-    'filename' => $config{'apache'}{'filename'}
+    'filename' => $config{'apache'}{'filename'},
+    'count' => $count
   );
 
-  for (my $i = 0; $i <= 1; $i++) {
-    my $star_pattern = pattern_to_stars($pattern); # (.*)\: (.*)
-    my $new_one = process_patterns($pattern, $new_pattern);
+  for (my $i = 0; $i <= $count; $i++) {
+    if (!defined($actual_patterns[$i]) || !defined($new_patterns[$i])) {
+      print "Patterns n°$i not founds.\n" || exit(4);
+    }
+
+    my $star_pattern = pattern_to_stars($actual_patterns[$i]); # (.*)\: (.*)
+    my $new_one = process_patterns($actual_patterns[$i], $new_patterns[$i]);
 
     $params{'actual'.$i} = $star_pattern;
     $params{'new'.$i} = $new_one;
