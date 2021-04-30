@@ -43,10 +43,6 @@ sub dd($) {
     print $_[0]."\n"; exit;
 }
 
-sub debug($) {
-    #print $_[0]."\n";
-}
-
 ###################
 # Define commands #
 ###################
@@ -79,20 +75,17 @@ sub get_config {
 
 sub slash_nochars_pattern($) { # $pattern
   my $slashed_pattern = replace("@_", "([^a-z<> ])", '\\\\$1');
-  debug("SLASH $slashed_pattern");
   return $slashed_pattern; # <alpha>: <msg> => <alpha>\: <msg>
 }
 
 sub pattern_to_stars($) { # $slashed_pattern
   my $star_pattern = replace("@_", "(<[a-z]+>)", "(.*)");
-  debug("STAR $star_pattern");
   return $star_pattern; # <alpha> <msg> => (.*) (.*)
 }
 
 sub pattern_to_items($) { # $pattern
   my $pattern = replace("@_", "\\s+", " "); # Trim multiple spaces
   my @items_list = ( $pattern =~ /(<[a-z]+>)/g );
-  debug("ITEMSLIST @items_list");
   return @items_list;
 }
 
@@ -116,16 +109,12 @@ sub process_patterns($$) {
   my @actual_items = pattern_to_items("$_[0]"); # [alpha, beta]
   
   # Colors
-  debug("NEW $_[1]");
-  my $new_pattern = number_to_color("$_[1]");
-  debug("COLORNEW $new_pattern");
-
-  my $new_pattern_by_items = "$new_pattern";
+  my $new_pattern_by_items = number_to_color("$_[1]"); # new_pattern = "$_[1]";
   for my $item_name (@actual_items) { # alpha beta gamma => 0 1 2
     my $index = get_index($item_name, \@actual_items)+1;
     $new_pattern_by_items = replace($new_pattern_by_items, "($item_name)", "\\\\$index"); 
   }
-  debug("NEW_BY_ITEMS $new_pattern_by_items");
+
   return $new_pattern_by_items;
 }
 
@@ -136,7 +125,7 @@ sub process_patterns($$) {
 sub run_tail(%) {
   my %params = @_;
   my $count = $params{'count'};
-  #print "${config{apache}{actual_patterns}[1]}";
+  # print "${config{apache}{actual_patterns}[1]}";
 
   use constant TAIL => "/usr/bin/tail ";
   use constant PIPE => " | ";
@@ -178,7 +167,6 @@ sub run_tail(%) {
   # Final command #
   push(@pipes, PIPE."$grep".PIPE."$sed");
   my $command = TAIL."@args"."@pipes";
-  debug($command);
 
   # RUN TAIL #
   open my $tail_pipe, "-|", $command or die "Error - Could not start tail on $params{'filename'}: $!";
