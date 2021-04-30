@@ -1,16 +1,9 @@
 #!/usr/bin/env perl
 
-# https://www.geeksforgeeks.org/perl-warnings-and-how-to-handle-them/
-
 use strict;
 use warnings;
 
 # apt-get update && apt-get install -y locales locales-all
-# echo -e 'LANG=en_US.UTF-8\nLC_ALL=en_US.UTF-8' > /etc/default/locale
-# print "@{[ %hash ]}";
-# foreach my $k (sort keys %config) { print "$k => $config{$k}\n"; }
-# while ( ($k,$v) = each %hash ) { print "$k => $v\n"; }
-# "${config{apache}{actual_patterns}[1]}";
 
 ##########
 # GLOBAL #
@@ -199,14 +192,19 @@ sub main {
   my @new_patterns = ();
   my $count = undef;
 
+  # Process
+  my %params = ();
+
   for (my $i=0; $i<100; $i++) {
     my $actual = ${config{'apache'}{'actual_patterns'}[$i]};
     my $new = ${config{'apache'}{'new_patterns'}[$i]};
     if (!defined($actual) || !defined($new)) {
         last;
     }
-    push(@actual_patterns, $actual);
-    push(@new_patterns, $new);
+    
+    $params{'actual'.$i} = pattern_to_stars($actual); # (.*)\: (.*)
+    $params{'new'.$i} = process_patterns($actual, $new);
+
     $count = $i;
   }
 
@@ -215,22 +213,8 @@ sub main {
   }
 
   # Process
-  my %params = (
-    'filename' => $config{'apache'}{'filename'},
-    'count' => $count
-  );
-
-  for (my $i = 0; $i <= $count; $i++) {
-    if (!defined($actual_patterns[$i]) || !defined($new_patterns[$i])) {
-      print "Patterns n°$i not founds.\n" || exit(4);
-    }
-
-    my $star_pattern = pattern_to_stars($actual_patterns[$i]); # (.*)\: (.*)
-    my $new_one = process_patterns($actual_patterns[$i], $new_patterns[$i]);
-
-    $params{'actual'.$i} = $star_pattern;
-    $params{'new'.$i} = $new_one;
-  }
+  $params{'filename'} = $config{'apache'}{'filename'};
+  $params{'count'} = $count;
 
   # Run
   run_tail(%params);
