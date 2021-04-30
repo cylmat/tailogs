@@ -1,13 +1,26 @@
-#!/usr/bin/env perl
+#!/usr/bin/perl -w
 
-use strict;
-use warnings;
+use strict; use warnings; use Getopt::Std; use Getopt::Long;
 
 # apt-get update && apt-get install -y locales locales-all
 
 ##########
 # GLOBAL #
 ##########
+
+my %opts;
+# http://articles.mongueurs.net/magazines/linuxmag49.html
+getopts( 'o:z', \%opts ); # or print_usage();
+GetOptions( "verbose" => \$verbose, "all" => \$all );
+print "$opts{'o'}\n";
+
+switch ($opts) {
+
+}
+
+sub print_usage {
+    print 'usage...';
+}
 
 sub replace($$$) {
   my $pattern = $_[0];
