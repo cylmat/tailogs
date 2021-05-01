@@ -30,18 +30,30 @@ Getopt::Long::Configure qw(gnu_getopt pass_through);
 # GLOBAL #
 ##########
 
+use constant EXIT_COULDNT_START_TAIL_COMMAND => 1;
+use constant EXIT_PATTERNS_NOT_FOUND => 2;
+use constant EXIT_IMPOSSIBLE_TO_READ_PATTERNS => 3;
+use constant EXIT_OPT_FILE_DONT_EXISTS => 5;
+
+my %opts;
 sub get_options() { # tail -cfFnqsvz
-    my %opts;
     GetOptions( \%opts, 
         'logfile|g=s',
         'help|h'
     );
+
+    if (hasopt('logfile')) {
+        if ( ! -e $opts{'logfile'}) {
+          launch_error("The log file '$opts{logfile}' doesn't exists: $!\n", EXIT_OPT_FILE_DONT_EXISTS);
+        }
+    }
+
     return %opts;
 }
 
-# sub hasopt($) {
-#     if (defined($opts{$_[0]})) { return 1; } else { return 0; }
-# }
+sub hasopt($) {
+    if (defined($opts{$_[0]})) { return 1; } else { return 0; }
+}
 
 sub print_usage {
     print "Usage: $0 [OPTION]...\n";
@@ -186,7 +198,7 @@ sub run_tail(%) {
     my $a = 'actual'.$i;
     my $n = 'new'.$i;
     if (!defined($params{$a}) || !defined($params{$n})) {
-      print "Patterns not founds.\n" || exit(2);
+      launch_error("Patterns not founds", EXIT_PATTERNS_NOT_FOUND);
     }
 
     my $replace = TOKEN."$params{$n}";
@@ -203,7 +215,8 @@ sub run_tail(%) {
   #print $command; exit;
 
   # RUN TAIL #
-  open my $tail_pipe, "-|", $command or die "Error - Could not start tail on $params{'filename'}: $!";
+  open my $tail_pipe, "-|", $command or 
+    launch_error("Could not start tail on $params{'filename'}", EXIT_COULDNT_START_TAIL_COMMAND);
   print while <$tail_pipe>;
 }
 
@@ -234,7 +247,7 @@ sub main {
   }
 
   if (!defined($count)) {
-      print "Impossible to read patterns." || exit(3);
+      launch_error("Impossible to read patterns", EXIT_IMPOSSIBLE_TO_READ_PATTERNS);
   }
 
   # Process
@@ -246,6 +259,11 @@ sub main {
 }
 
 main();
+
+sub launch_error($$) {
+  print "Error - $_[0]: $!\n";
+  exit($_[1]);
+}
 
 # apt-get update && apt-get install -y locales locales-all
 # print "@{[ %opts ]}"; print "@ARGV";
