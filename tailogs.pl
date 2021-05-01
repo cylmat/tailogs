@@ -26,8 +26,6 @@ use strict; use warnings;
 use Getopt::Long qw(GetOptions);
 Getopt::Long::Configure qw(gnu_getopt pass_through);
 
-# apt-get update && apt-get install -y locales locales-all
-
 ##########
 # GLOBAL #
 ##########
@@ -211,7 +209,7 @@ sub run_tail(%) {
 
 sub main {
   # Options
-  get_options();
+  my %opts = get_options();
 
   # Config
   my %config = get_config();
@@ -248,3 +246,6 @@ sub main {
 }
 
 main();
+
+# apt-get update && apt-get install -y locales locales-all
+# print "@{[ %opts ]}"; print "@ARGV";
