@@ -1,6 +1,30 @@
 #!/usr/bin/perl -w
 
-use strict; use warnings; use Getopt::Std; use Getopt::Long;
+# MIT License
+
+# Copyright (c) 2021 Cylmat
+
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is furnished
+# to do so, subject to the following conditions:
+
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+
+use strict; use warnings;
+use Getopt::Long qw(GetOptions);
+Getopt::Long::Configure qw(gnu_getopt pass_through);
 
 # apt-get update && apt-get install -y locales locales-all
 
@@ -8,18 +32,21 @@ use strict; use warnings; use Getopt::Std; use Getopt::Long;
 # GLOBAL #
 ##########
 
-my %opts;
-# http://articles.mongueurs.net/magazines/linuxmag49.html
-getopts( 'o:z', \%opts ); # or print_usage();
-GetOptions( "verbose" => \$verbose, "all" => \$all );
-print "$opts{'o'}\n";
-
-switch ($opts) {
-
+sub get_options() { # tail -cfFnqsvz
+    my %opts;
+    GetOptions( \%opts, 
+        'logfile|g=s',
+        'help|h'
+    );
+    return %opts;
 }
 
+# sub hasopt($) {
+#     if (defined($opts{$_[0]})) { return 1; } else { return 0; }
+# }
+
 sub print_usage {
-    print 'usage...';
+    print "Usage: $0 [OPTION]...\n";
 }
 
 sub replace($$$) {
@@ -139,12 +166,11 @@ sub run_tail(%) {
   use constant TAIL => "/usr/bin/tail ";
   use constant PIPE => " | ";
   
-  my @args = ();
+  my @args = @ARGV;
   my @pipes = ();
 
   ###
   # Tail args #
-  push(@args, "-n 3 ");
   push(@args, $params{'filename'});
 
   ###
@@ -176,6 +202,7 @@ sub run_tail(%) {
   # Final command #
   push(@pipes, PIPE."$grep".PIPE."$sed");
   my $command = TAIL."@args"."@pipes";
+  #print $command; exit;
 
   # RUN TAIL #
   open my $tail_pipe, "-|", $command or die "Error - Could not start tail on $params{'filename'}: $!";
@@ -183,6 +210,9 @@ sub run_tail(%) {
 }
 
 sub main {
+  # Options
+  get_options();
+
   # Config
   my %config = get_config();
   my @actual_patterns = ();
